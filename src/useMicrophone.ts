@@ -46,7 +46,7 @@ export function useMicrophone() {
           setConfidence(Math.round(doorbellProbability * 100));
 
           // Our new "Pattern" Threshold: If the AI is 85% sure it heard a doorbell...
-          if (doorbellProbability > 0.94) {
+          if (doorbellProbability > 0.5) {
              setIsAlarming(true);
           }
         }

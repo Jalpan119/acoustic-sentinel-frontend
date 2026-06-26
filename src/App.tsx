@@ -1,14 +1,50 @@
+import { useEffect } from 'react'; 
 import './index.css';
 import { useMicrophone } from './useMicrophone';
 
 function App() {
-  
-  // Notice we dropped the '80' parameter! The AI handles the threshold now.
   const { isListening, isAlarming, startListening, stopListening, confidence } = useMicrophone();
+
+  // =========================================================================
+  // PIPELINE: EDGE SENSOR DISPATCHER (For your Edge Device - Pixel 6a)
+  // =========================================================================
+  useEffect(() => {
+    if (isAlarming) {
+      const payload = {
+        sensorId: "LIVING_ROOM_MIC_01",
+        eventType: "DOORBELL_DETECTED",
+        confidenceScore: confidence 
+      };
+
+      const LAPTOP_IP = "192.168.29.188"; // Your local backend IPv4 address
+
+      console.log(`🚨 Dispatching payload to http://${LAPTOP_IP}:8080/api/v1/alerts...`);
+
+      // Fire HTTP POST request to your Spring Boot backend
+      fetch(`http://${LAPTOP_IP}:8080/api/v1/alerts`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log("🎯 Live MongoDB Persistence Confirmed!", data);
+      })
+      .catch(error => {
+        console.error("❌ Network Pipeline Failure:", error);
+      });
+    }
+  }, [isAlarming, confidence]); 
 
   return (
     <div className="min-h-screen bg-gray-100 flex justify-center items-center font-sans">
-      
       <div className="bg-white w-[350px] p-6 rounded-2xl shadow-lg flex flex-col gap-4">
         
         {/* The Header Area */}
@@ -25,7 +61,6 @@ function App() {
             {isAlarming ? 'ALARM TRIGGERED!' : isListening ? 'AI Monitoring...' : 'System Offline'}
           </div>
           
-          {/* New UI: Real-time AI Confidence Score */}
           {isListening && !isAlarming && (
              <div className="text-xs font-bold text-gray-400 bg-gray-50 px-2 py-1 rounded-md">
                Match: {confidence}%
